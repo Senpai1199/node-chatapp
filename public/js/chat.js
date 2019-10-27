@@ -3,12 +3,31 @@ const socket = io() //socket is used to receive or send events
 const $messageForm = document.querySelector("#message-form")
 const $messageFormInput = $messageForm.querySelector("input")
 const $messageFormButton = $messageForm.querySelector("button")
-
 const $sendLocationButton = document.querySelector("#share-location-button")
+const $messages = document.querySelector("#messages") //div tag where html is to be inserted
+
+// Templates
+const messageTemplate = document.querySelector("#message-template").innerHTML
+const locationTemplate = document.querySelector("#location-template").innerHTML
 
 
+// Normal message that is not a location
 socket.on("message", (message) => {
     console.log(message)
+    const html = Mustache.render(messageTemplate, {
+        message: message // key (message) is the value we want to access inside the template 
+    })
+    $messages.insertAdjacentHTML("beforeend", html)
+})
+
+// When user shares location
+socket.on("locationMessage", (url) => {
+    console.log(url)
+
+    const html = Mustache.render(locationTemplate, {
+        url: url
+    })
+    $messages.insertAdjacentHTML("beforeend", html)
 })
 
 // Send message to everyone
