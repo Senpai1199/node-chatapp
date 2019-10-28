@@ -7,6 +7,7 @@ const Filter = require("bad-words")
 const app = express()
 const server = http.createServer(app)
 const io = socketio(server)
+const { generateMessage } = require("./utils/messages")
 
 const publicDirectoryPath = path.join(__dirname, "public")
 app.use(express.static(publicDirectoryPath))
@@ -16,9 +17,9 @@ app.use(express.static(publicDirectoryPath))
 io.on('connection', (socket) => { // socket is a parameter that contains info about the new connection
     console.log("New WebSocket connection")
 
-    socket.emit("message", "Welcome")
+    socket.emit("message", generateMessage("Welcome"))
 
-    socket.broadcast.emit("message", "A new user has joined.") //emits the event to everyone except the current client
+    socket.broadcast.emit("message", generateMessage("A new user has joined.")) //emits the event to everyone except the current client
 
     socket.on("sendMessage", (message, callback) => {
         const filter = new Filter()
@@ -26,19 +27,20 @@ io.on('connection', (socket) => { // socket is a parameter that contains info ab
             return callback("Profanity is not allowed.")
         }
 
-        io.emit("message", message) //emit the message event to every client
+        io.emit("message", generateMessage(message)) //emit the message event to every client
         callback( )
     })
 
     socket.on("sendLocation", (coords, callback) => {
-        io.emit("locationMessage", `https://google.com/maps/?q=${coords.latitude},${coords.longitude}`)
+        loc_url = `https://google.com/maps/?q=${coords.latitude},${coords.longitude}`
+        io.emit("locationMessage", generateMessage(loc_url) )
         callback()
     })
  
     socket.on("disconnect", () => {
-        io.emit("message", "A user has left.") //client is already disconnected so no need to use socket.broadcast.emit()
+        io.emit("message", generateMessage("A user has left.")) //client is already disconnected so no need to use socket.broadcast.emit()
     })
-
+ 
 
  // Broadcast - send the event to everybodt except the connected client
 
