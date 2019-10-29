@@ -7,7 +7,7 @@ const Filter = require("bad-words")
 const app = express()
 const server = http.createServer(app)
 const io = socketio(server)
-const { generateMessage } = require("./utils/messages")
+const { generateMessage, generateLocationMessage } = require("./utils/messages")
 
 const publicDirectoryPath = path.join(__dirname, "public")
 app.use(express.static(publicDirectoryPath))
@@ -17,9 +17,16 @@ app.use(express.static(publicDirectoryPath))
 io.on('connection', (socket) => { // socket is a parameter that contains info about the new connection
     console.log("New WebSocket connection")
 
-    socket.emit("message", generateMessage("Welcome"))
+    //socket.broadcast.emit -> emits the event to everyone except the current client
 
-    socket.broadcast.emit("message", generateMessage("A new user has joined.")) //emits the event to everyone except the current client
+    socket.on("join", ({ username, room }) => {
+        socket.join(room)
+
+        socket.emit("message", generateMessage("Welcome"))
+        socket.broadcast.to(room).emit("message", generateMessage(`${username} has joined the chatroom.`)) //limits broadcast to that room
+                                                                                             // and not to every client
+        //io.to.emit, socket.broadcast.to.emit
+    })
 
     socket.on("sendMessage", (message, callback) => {
         const filter = new Filter()
@@ -32,11 +39,10 @@ io.on('connection', (socket) => { // socket is a parameter that contains info ab
     })
 
     socket.on("sendLocation", (coords, callback) => {
-        loc_url = `https://google.com/maps/?q=${coords.latitude},${coords.longitude}`
-        io.emit("locationMessage", generateMessage(loc_url) )
+        io.emit("locationMessage", generateLocationMessage(coords))
         callback()
     })
- 
+
     socket.on("disconnect", () => {
         io.emit("message", generateMessage("A user has left.")) //client is already disconnected so no need to use socket.broadcast.emit()
     })
