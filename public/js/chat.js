@@ -5,22 +5,49 @@ const $messageFormInput = $messageForm.querySelector("input")
 const $messageFormButton = $messageForm.querySelector("button")
 const $sendLocationButton = document.querySelector("#share-location-button")
 const $messages = document.querySelector("#messages") //div tag where html is to be inserted
+const $sidebar = document.querySelector("#sidebar") //div tag of sidebar
 
-// Templates
+// Templates 
 const messageTemplate = document.querySelector("#message-template").innerHTML
 const locationTemplate = document.querySelector("#location-template").innerHTML
+const sidebarTemplate = document.querySelector("#sidebar-template").innerHTML
 
 // Options
 const { username, room } = Qs.parse(location.search, { ignoreQueryPrefix: true })
 
+const autoscroll = () => {
+    // New message element
+    const $newMessage = $messages.lastElementChild
+
+    // Height of the new message
+    const newMessageStyles = getComputedStyle($newMessage) //getComputedStyle() is a provided global function to get CSS styles of elements
+    const newMessageMargin = parseInt(newMessageStyles.marginBottom) //Bottom margin of the new message to be added in newMessageHeight
+    const newMessageHeight = $newMessage.offsetHeight + newMessageMargin
+
+    // Visible height
+    const visibleHeight = $messages.offsetHeight
+
+    // Height of messages container
+    const containerHeight = $messages.scrollHeight
+
+    // Depth of scrolling (How far have I scrolled)
+    const scrollOffset = $messages.ScrollTop + visibleHeight
+
+    if(containerHeight - newMessageHeight >= scrollOffset) {
+        $messages.scrollTop = $messages.scrollHeight //autoscroll the user to the bottom
+    }
+
+}
+
 // Normal message that is not a location
 socket.on("message", (message) => {
-    console.log(message)
     const html = Mustache.render(messageTemplate, {
         message: message.text, // key (message) is the value we want to access inside the template 
-        createdAt: moment(message.createdAt).format("h:mm a")
+        createdAt: moment(message.createdAt).format("h:mm a"),
+        username: message.username
     })
     $messages.insertAdjacentHTML("beforeend", html)
+    autoscroll()
 })
 
 // When user shares location
@@ -29,9 +56,20 @@ socket.on("locationMessage", (message) => {
 
     const html = Mustache.render(locationTemplate, {
         url: message.url,
-        createdAt: moment(message.createdAt).format("h:mm a")
+        createdAt: moment(message.createdAt).format("h:mm a"),
+        username: message.username,
     })
     $messages.insertAdjacentHTML("beforeend", html)
+    autoscroll()
+})
+
+//Update room data when user joins or disconnects from room
+socket.on("roomData", ({ room, users }) => {
+    const html = Mustache.render(sidebarTemplate, {
+        room,
+        users
+    })
+    $sidebar.innerHTML = html
 })
 
 // Send message to everyone
@@ -74,7 +112,12 @@ $sendLocationButton.addEventListener("click", () => {
     })
 })
 
-socket.emit("join", { username, room })
+socket.emit("join", { username, room }, (error) => {
+    if(error) {
+        alert(error)
+        location.href = "/"
+    }
+})
 
 // socket.on("countUpdated", (count) => {
 //     console.log(`The count has been updated to: ${count}`)
@@ -84,4 +127,5 @@ socket.emit("join", { username, room })
 // increment_button.addEventListener("click", () => {
 //     socket.emit("increment")
 // })
+
  
